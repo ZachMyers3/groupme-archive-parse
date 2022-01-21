@@ -32,6 +32,14 @@ def sort_dict(dictionary) -> dict:
     return dict(sorted(dictionary.items(), key=lambda item: item[1], reverse=True))
 
 
+def print_dict(dictionary) -> None:
+    for key, total in dictionary.items():
+        try:
+            print(f"{NAME_LUT[key]}\t\t{total:.2f}")
+        except KeyError:
+            continue
+
+
 def main():
     with open(MESSAGE_JSON_LOCATION, 'r', encoding='utf-8') as _f:
         message_json = json.load(_f)
@@ -68,19 +76,11 @@ def main():
 
     message_count = sort_dict(message_count)
     print("==== MESSAGES SENT ====")
-    for key, total in message_count.items():
-        try:
-            print(f"{NAME_LUT[key]}\t\t{total}")
-        except KeyError:
-            continue
+    print_dict(message_count)
 
     likes_total = sort_dict(likes_total)
     print("==== LIKES  TOTAL ====")
-    for key, total in likes_total.items():
-        try:
-            print(f"{NAME_LUT[key]}\t\t{total}")
-        except KeyError:
-            continue
+    print_dict(likes_total)
 
     total_lpp = {}
     for key, total_likes in likes_total.items():
@@ -93,19 +93,11 @@ def main():
 
     total_lpp = sort_dict(total_lpp)
     print("==== TOTAL   LPP ====")
-    for key, total in total_lpp.items():
-        try:
-            print(f"{NAME_LUT[key]}\t\t{total:.2f}")
-        except KeyError:
-            continue
+    print_dict(total_lpp)
 
     liked_messages = sort_dict(liked_messages)
     print("==== TOTAL MESSAGES LIKED ====")
-    for key, total in liked_messages.items():
-        try:
-            print(f"{NAME_LUT[key]}\t\t{total}")
-        except KeyError:
-            continue
+    print_dict(liked_messages)
 
     total_lpm = {}
     for key, total_liked in liked_messages.items():
@@ -118,11 +110,7 @@ def main():
 
     total_lpm = sort_dict(total_lpm)
     print("==== TOTAL LIKES PER MESSAGE ====")
-    for key, total in total_lpm.items():
-        try:
-            print(f"{NAME_LUT[key]}\t\t{total:.2f}")
-        except KeyError:
-            continue
+    print_dict(total_lpm)
 
 
 if __name__ == "__main__":
