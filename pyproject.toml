@@ -1,0 +1,38 @@
+[tool.black]
+line-length = 79
+target-version = ['py38']
+include = '\.pyi?$'
+exclude = '''
+
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
+
+[tool.poetry]
+name = "groupme-archive-parse"
+description=""
+authors=["Zach Myers"]
+version = "0.1.0"
+
+[tool.poetry.dependencies]
+python = ">=3.8,<4.0"
+wordcloud = "^1.8.1"
+pandas = "^1.3.5"
+matplotlib = "^3.5.1"
+
+[tool.poetry.dev-dependencies]
+black = "^19.10b0"

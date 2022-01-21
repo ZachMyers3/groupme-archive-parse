@@ -20,6 +20,46 @@ NAME_LUT = {
 }
 
 
+class HistoryGroupmeStats:
+    message_count: dict
+    likes_total: dict
+    liked_messages: dict
+    total_lpp: dict
+    total_lpm: dict
+
+    def __init__(self, in_message_count, in_likes_total, in_liked_messages, in_total_lpp, in_total_lpm):
+        self.message_count = in_message_count
+        self.likes_total = in_likes_total
+        self.liked_messages = in_liked_messages
+        self.total_lpp = in_total_lpp
+        self.total_lpm = in_total_lpm
+
+
+    def __repr__(self):
+        return_str = ""
+        self.message_count = sort_dict(self.message_count)
+        print("==== MESSAGES SENT ====")
+        print_dict(self.message_count)
+
+        self.likes_total = sort_dict(self.likes_total)
+        print("==== LIKES  TOTAL ====")
+        print_dict(self.likes_total)
+
+
+        self.total_lpp = sort_dict(self.total_lpp)
+        print("==== TOTAL   LPP ====")
+        print_dict(self.total_lpp)
+
+        self.liked_messages = sort_dict(self.liked_messages)
+        print("==== TOTAL MESSAGES LIKED ====")
+        print_dict(self.liked_messages)
+
+        self.total_lpm = sort_dict(self.total_lpm)
+        print("==== TOTAL LIKES PER MESSAGE ====")
+        print_dict(self.total_lpm)
+
+        return ""
+
 def get_lpp(message) -> int:
     return int(len(message["favorited_by"]))
 
@@ -40,7 +80,7 @@ def print_dict(dictionary) -> None:
             continue
 
 
-def main():
+def gather_stats_by_year(year: str):
     with open(MESSAGE_JSON_LOCATION, 'r', encoding='utf-8') as _f:
         message_json = json.load(_f)
 
@@ -48,10 +88,15 @@ def main():
     likes_total = {}
     liked_messages = {}
 
+    start_date = datetime.date.fromisoformat(f"{year}-12-31")
+    end_date = datetime.date.fromisoformat(f"{year+1}-01-01")
+    print(start_date, end_date)
     for message in message_json:
         # print(message)
-        created_time = datetime.datetime.fromtimestamp(message["created_at"])
-        if created_time.date() > datetime.date.fromisoformat("2020-12-31") and created_time.date() < datetime.date.fromisoformat("2022-01-01"):
+        created_time = datetime.datetime.fromtimestamp(message["created_at"]).date()
+        # if created_time.date() > datetime.date.fromisoformat(start_date) and created_time.date() < datetime.date.fromisoformat(end_date):
+        if start_date <= created_time <= end_date:
+            # print(created_time)
             continue
 
         lpp = get_lpp(message)
@@ -73,15 +118,6 @@ def main():
         except KeyError:
             likes_total[message["sender_id"]] = lpp
 
-
-    message_count = sort_dict(message_count)
-    print("==== MESSAGES SENT ====")
-    print_dict(message_count)
-
-    likes_total = sort_dict(likes_total)
-    print("==== LIKES  TOTAL ====")
-    print_dict(likes_total)
-
     total_lpp = {}
     for key, total_likes in likes_total.items():
         total_messages = message_count[key]
@@ -90,14 +126,6 @@ def main():
         except KeyError:
             continue
         total_lpp[key] = lpp
-
-    total_lpp = sort_dict(total_lpp)
-    print("==== TOTAL   LPP ====")
-    print_dict(total_lpp)
-
-    liked_messages = sort_dict(liked_messages)
-    print("==== TOTAL MESSAGES LIKED ====")
-    print_dict(liked_messages)
 
     total_lpm = {}
     for key, total_liked in liked_messages.items():
@@ -108,10 +136,15 @@ def main():
             continue
         total_lpm[key] = lpm
 
-    total_lpm = sort_dict(total_lpm)
-    print("==== TOTAL LIKES PER MESSAGE ====")
-    print_dict(total_lpm)
+    return HistoryGroupmeStats(in_message_count=message_count, in_likes_total=likes_total, in_liked_messages=liked_messages, in_total_lpp=total_lpp, in_total_lpm=total_lpm)
 
+
+def main():
+    stats_2020 = gather_stats_by_year(year=2020)
+    stats_2021 = gather_stats_by_year(year=2021)
+
+    print(stats_2020)
+    print(stats_2021)
 
 if __name__ == "__main__":
     main()
