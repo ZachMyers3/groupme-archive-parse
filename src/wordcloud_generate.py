@@ -5,6 +5,7 @@ import json
 from wordcloud import WordCloud, STOPWORDS
 import matplotlib.pyplot as plt
 import pandas as pd
+import datetime
 
 MESSAGE_JSON_LOCATION = pathlib.Path("./src/static/message.json")
 
@@ -45,16 +46,24 @@ def print_dict(dictionary) -> None:
             continue
 
 
-def main():
+def main(year: int):
     with open(MESSAGE_JSON_LOCATION, "r", encoding="utf-8") as _f:
         message_json = json.load(_f)
 
     words_by_user = {}
 
+    start_date = datetime.date.fromisoformat(f"{year}-12-31")
+    end_date = datetime.date.fromisoformat(f"{year+1}-01-01")
     for message in message_json:
         try:
             name = NAME_LUT[message["sender_id"]]
         except KeyError:
+            continue
+
+        created_time = datetime.datetime.fromtimestamp(
+            message["created_at"]
+        ).date()
+        if start_date <= created_time <= end_date:
             continue
 
         message = (
@@ -75,19 +84,23 @@ def main():
             words_by_user[name] = message
 
     stopwords = set(STOPWORDS)
-    stopwords.update(["s", "m", "t", "don"])
+    stopwords.update(["s", "m", "t", "don", "re"])
     for name, words in words_by_user.items():
         print(f"Generating cloud for {name}")
         wc = WordCloud(
-            width=2500,
-            height=2500,
+            width=1500,
+            height=1500,
             background_color="white",
             stopwords=stopwords,
             min_font_size=10,
         ).generate(words)
 
-        wc.to_file(f".\\images\\{name}.jpg")
+        save_dir = pathlib.Path(f".\\images\\{year}")
+        save_dir.mkdir(exist_ok=True)
+        wc.to_file(str(save_dir / f"{name}.jpg"))
 
 
 if __name__ == "__main__":
-    main()
+    main(year=2021)
+    main(year=2020)
+    main(year=2019)
