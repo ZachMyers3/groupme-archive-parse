@@ -1,3 +1,4 @@
+from os import waitpid
 import pathlib
 import json
 
@@ -48,12 +49,11 @@ def main():
     with open(MESSAGE_JSON_LOCATION, "r", encoding="utf-8") as _f:
         message_json = json.load(_f)
 
-    words = ""
+    words_by_user = {}
 
     for message in message_json:
         try:
-            if NAME_LUT[message["sender_id"]] != "Chance":
-                continue
+            name = NAME_LUT[message["sender_id"]]
         except KeyError:
             continue
 
@@ -62,27 +62,31 @@ def main():
             .lower()
             .strip()
             .replace("\n", " ")
-            .replace(" s ", " ")
+            .replace("\\'", "'")
+            .replace(".", "")
+            .replace("?", "")
+            .replace("!", "")
             + " "
         )
-        if " s " in message:
-            print(message)
-        words += message
 
-    wc = WordCloud(
-        width=800,
-        height=800,
-        background_color="white",
-        stopwords=set(STOPWORDS),
-        min_font_size=10,
-    ).generate(words)
+        try:
+            words_by_user[name] += message
+        except KeyError:
+            words_by_user[name] = message
 
-    plt.figure(figsize=(8, 8), facecolor=None)
-    plt.imshow(wc)
-    plt.axis("off")
-    plt.tight_layout(pad=0)
+    stopwords = set(STOPWORDS)
+    stopwords.update(["s", "m", "t", "don"])
+    for name, words in words_by_user.items():
+        print(f"Generating cloud for {name}")
+        wc = WordCloud(
+            width=2500,
+            height=2500,
+            background_color="white",
+            stopwords=stopwords,
+            min_font_size=10,
+        ).generate(words)
 
-    plt.show()
+        wc.to_file(f".\\images\\{name}.jpg")
 
 
 if __name__ == "__main__":
