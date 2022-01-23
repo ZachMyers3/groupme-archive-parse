@@ -1,6 +1,8 @@
-from sqlite3 import Date
-from tokenize import group
+from os import mkdir
+from pyexpat.errors import messages
 from typing import List
+import pathlib
+from wordcloud import WordCloud, STOPWORDS
 
 import json
 
@@ -19,8 +21,6 @@ NAME_LUT = {
     "17287394": "Bricker",
     "12478609": "Chance",
     "12478582": "Jared",
-    "system": "system",
-    "calendar": "calendar",
 }
 
 
@@ -29,6 +29,7 @@ class GroupmeMessage:
     message_text: str
     favorited_by: List[str]
     created_at: datetime
+    attachments: List[dict]
     raw: dict
 
     def parse_favorites(self, favorite_list) -> List[str]:
@@ -51,6 +52,7 @@ class GroupmeMessage:
         self.favorited_by = self.parse_favorites(
             groupme_message["favorited_by"]
         )
+        self.attachments = groupme_message["attachments"]
         self.created_at = datetime.fromtimestamp(groupme_message["created_at"])
         self.raw = groupme_message
 
@@ -93,6 +95,14 @@ class GroupmeMessages:
                 if user.lower() == message.name.lower():
                     yield message
 
+    def by_year_and_users(self, year: int, users: List[str]):
+        start_date = datetime.fromisoformat(f"{year}-01-01")
+        end_date = datetime.fromisoformat(f"{year}-12-31")
+        for message in self.messages:
+            if start_date <= message.created_at <= end_date:
+                if message.name.lower() in [x.lower() for x in users]:
+                    yield message
+
     def get_most_liked_messages(self, year: int, user: str):
         most_liked = []
         most_liked_int = 0
@@ -111,10 +121,98 @@ class GroupmeMessages:
 
         return most_liked
 
+    def compute_like_statistics(self, year: int):
+        print(f"Generating statistics for year {year}...")
+        self.total_likes_given = {}
+        self.total_likes_recieved = {}
+        self.total_messages = {}
+        self.total_image_posts = {}
+        for user in NAME_LUT.values():
+            user = user.lower()
+            self.total_likes_given[user] = 0
+            self.total_likes_recieved[user] = 0
+            self.total_messages[user] = 0
+            self.total_image_posts[user] = 0
+
+        for message in self.by_year(year=year):
+            if len(message.attachments) > 0:
+                if message.attachments[0]["type"] == "image":
+                    self.total_image_posts[message.name.lower()] += 1
+            self.total_messages[message.name.lower()] += 1
+            self.total_likes_recieved[
+                message.name.lower()
+            ] += message.favorited_count
+            for favoritee in message.favorited_by:
+                self.total_likes_given[favoritee.lower()] += 1
+
+        self.average_likes_recieved_per_message = {}
+        self.average_likes_given_per_message = {}
+        for name, value in self.total_messages.items():
+            self.average_likes_given_per_message[name] = (
+                self.total_likes_given[name.lower()] / value
+            )
+            self.average_likes_recieved_per_message[name] = (
+                self.total_likes_recieved[name.lower()] / value
+            )
+
+        self.total_messages = self.sort_dict(self.total_messages)
+        self.total_likes_given = self.sort_dict(self.total_likes_given)
+        self.total_likes_recieved = self.sort_dict(self.total_likes_recieved)
+        self.total_image_posts = self.sort_dict(self.total_image_posts)
+        self.average_likes_recieved_per_message = self.sort_dict(
+            self.average_likes_recieved_per_message
+        )
+        self.average_likes_given_per_message = self.sort_dict(
+            self.average_likes_given_per_message
+        )
+
+    def generate_word_clouds(
+        self, year: int, users: List[str], save_location=pathlib.Path
+    ):
+        words_dictionary = {}
+        for user in users:
+            words_dictionary[user.lower()] = ""
+
+        for message in self.by_year_and_users(year=year, users=users):
+            scrubbed_message = (
+                str(message.message_text)
+                .lower()
+                .strip()
+                .replace("\n", " ")
+                .replace("\\'", "'")
+                .replace(".", "")
+                .replace("?", "")
+                .replace("!", "")
+                + " "
+            )
+            words_dictionary[message.name.lower()] += scrubbed_message
+
+        stopwords = set(STOPWORDS)
+        stopwords.update(["s", "m", "t", "don", "re"])
+        for name, words in words_dictionary.items():
+            print(f"Generating word cloud {name}/{year}")
+            wc = WordCloud(
+                width=1500,
+                height=1500,
+                background_color="white",
+                stopwords=stopwords,
+                min_font_size=10,
+            ).generate(words)
+
+            save_location.mkdir(exist_ok=True)
+            wc.to_file(str(save_location / f"{name}.jpg"))
+
+    @staticmethod
+    def sort_dict(dictionary) -> dict:
+        return dict(
+            sorted(dictionary.items(), key=lambda item: item[1], reverse=True)
+        )
+
     def __init__(self, json_file):
         with open(json_file, "r", encoding="utf-8") as _f:
             message_json = json.load(_f)
 
+        print("Loading messages from JSON...")
         self.messages = []
         for message in message_json:
             if self.filter_message(message):
