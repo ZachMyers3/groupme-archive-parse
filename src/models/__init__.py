@@ -166,6 +166,22 @@ class GroupmeMessages:
             self.average_likes_given_per_message
         )
 
+    def generate_csv(self, save_location=pathlib.Path):
+        csv = "name,total_messages,total_likes_given,total_likes_recieved,total_image_posts,average_likes_recieved_per_message,average_likes_given_per_messsage\n"
+        for name in self.total_messages.keys():
+            name = name.lower()
+            csv_line = f"{name},"
+            csv_line += f"{self.total_messages[name]},"
+            csv_line += f"{self.total_likes_given[name]},"
+            csv_line += f"{self.total_likes_recieved[name]},"
+            csv_line += f"{self.total_image_posts[name]},"
+            csv_line += f"{self.average_likes_recieved_per_message[name]},"
+            csv_line += f"{self.average_likes_given_per_message[name]}\n"
+            csv += csv_line
+
+        with open(save_location, "w") as _w:
+            _w.write(csv)
+
     def generate_word_clouds(
         self, year: int, users: List[str], save_location=pathlib.Path
     ):
